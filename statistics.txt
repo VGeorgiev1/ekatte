@@ -1,0 +1,32 @@
+There are : 28 areas
+There are : 5257 localities
+There are : 265 municicpalities 
+
+In area JAM there are 109 localities
+In area VID there are 140 localities
+In area SHU there are 151 localities
+In area PER there are 171 localities
+In area DOB there are 215 localities
+In area KRZ there are 468 localities
+In area VRC there are 123 localities
+In area SLV there are 110 localities
+In area KNL there are 182 localities
+In area VAR there are 159 localities
+In area PDV there are 212 localities
+In area PAZ there are 118 localities
+In area SZR there are 206 localities
+In area SML there are 240 localities
+In area MON there are 130 localities
+In area LOV there are 110 localities
+In area SFO there are 284 localities
+In area PVN there are 123 localities
+In area VTR there are 336 localities
+In area HKV there are 261 localities
+In area RSE there are 83 localities
+In area RAZ there are 103 localities
+In area BLG there are 274 localities
+In area BGS there are 250 localities
+In area SOF there are 38 localities
+In area TGV there are 194 localities
+In area GAB there are 349 localities
+In area SLS there are 118 localities
