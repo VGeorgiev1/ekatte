@@ -26,6 +26,7 @@ pool.query(`CREATE TABLE IF NOT EXISTS Areas(
                 ekatte CHAR(5) PRIMARY KEY NOT NULL,
                 name VARCHAR(30),
                 municipality CHAR(5),
+                type VARCHAR(5),
                 FOREIGN KEY(municipality) REFERENCES Municipalities(name)
             );`)
     .then(async (res, err) => {
@@ -51,6 +52,7 @@ pool.query(`CREATE TABLE IF NOT EXISTS Areas(
             ekatte: 'ekatte',
             name: 'name',
             municipality: 'obstina',
+            type: 't_v_m',
           });
       pool.end();
     });
@@ -82,7 +84,7 @@ async function createRecords(filename, sheet, header, model, defaults) {
         if (defaults[defKey].filter) {
           _defaults[defKey] = defaults[defKey].filter(row[defaults[defKey].col]);
         } else {
-          _defaults[defKey] = row[defaults[defKey]]
+          _defaults[defKey] = row[defaults[defKey]];
         }
       }
       const valuesPlaceholders = [...Array(Object.values(_defaults).length)]
