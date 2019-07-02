@@ -10,35 +10,28 @@ const pool = new Pool({
   port: 5432,
 });
 pool.query(`CREATE TABLE IF NOT EXISTS Areas(
-                  name CHAR(3) PRIMARY KEY NOT NULL,
-                  ekatte CHAR(5),
-                  area_name VARCHAR(20),
-                  region CHAR(4),
-                  document SMALLINT
-              );
-              CREATE TABLE IF NOT EXISTS Municipalities(
-                  name CHAR(5) PRIMARY KEY NOT NULL,
-                  ekatte CHAR(5),
-                  municipality_name VARCHAR(20)
-              );
-              CREATE TABLE IF NOT EXISTS Localities(
-                  ekatte CHAR(5) PRIMARY KEY NOT NULL,
-                  name VARCHAR(30),
-                  area CHAR(3),
-                  municipality CHAR(5),
-                  FOREIGN KEY(area) REFERENCES Areas(name),
-                  FOREIGN KEY(municipality) REFERENCES Municipalities(name)
-              );`)
+            name CHAR(3) PRIMARY KEY NOT NULL,
+                ekatte CHAR(5),
+                area_name VARCHAR(20),
+                region CHAR(4)
+            );
+            CREATE TABLE IF NOT EXISTS Municipalities(
+                name CHAR(5) PRIMARY KEY NOT NULL,
+                ekatte CHAR(5),
+                municipality_name VARCHAR(20),
+                area CHAR(3),
+                FOREIGN KEY(area) references Areas(name)
+            );
+            CREATE TABLE IF NOT EXISTS Localities(
+                ekatte CHAR(5) PRIMARY KEY NOT NULL,
+                name VARCHAR(30),
+                municipality CHAR(5),
+                FOREIGN KEY(municipality) REFERENCES Municipalities(name)
+            );`)
     .then(async (res, err) => {
       if (err) {
         console.log(err);
       }
-      await createRecords('./Ek_obst.xlsx', 'Ek_obst', 2, 'Municipalities',
-          {
-            ekatte: 'ekatte',
-            name: 'obstina',
-            municipality_name: 'name',
-          });
       await createRecords('./Ek_obl.xlsx', 'Ek_obl', 2, 'Areas',
           {
             ekatte: 'ekatte',
@@ -46,11 +39,17 @@ pool.query(`CREATE TABLE IF NOT EXISTS Areas(
             name: 'oblast',
             region: 'region',
           });
+      await createRecords('./Ek_obst.xlsx', 'Ek_obst', 2, 'Municipalities',
+          {
+            ekatte: 'ekatte',
+            name: 'obstina',
+            municipality_name: 'name',
+            area: {col: 'obstina', filter: (val)=>val.substring(0, 3)},
+          });
       await createRecords('./Ek_atte.xlsx', 'Ek_atte', 3, 'Localities',
           {
             ekatte: 'ekatte',
             name: 'name',
-            area: 'oblast',
             municipality: 'obstina',
           });
       pool.end();
@@ -80,12 +79,16 @@ async function createRecords(filename, sheet, header, model, defaults) {
     if (row['ekatte'] !== '00000') {
       const _defaults = {};
       for (const defKey of defKeys) {
-        _defaults[defKey] = row[defaults[defKey]];
+        if (defaults[defKey].filter) {
+          _defaults[defKey] = defaults[defKey].filter(row[defaults[defKey].col]);
+        } else {
+          _defaults[defKey] = row[defaults[defKey]]
+        }
       }
       const valuesPlaceholders = [...Array(Object.values(_defaults).length)]
           .map((_, i) => '$' + (i+1).toString());
-      const values = Object.values(_defaults);
 
+      const values = Object.values(_defaults);
       promissContainer.push(pool.connect().then((client) => {
         return client.query(`INSERT INTO ${model} (${defKeys.join(',')})
                              VALUES(${valuesPlaceholders.join(',')})

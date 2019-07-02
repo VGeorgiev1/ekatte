@@ -18,7 +18,7 @@ client.connect().then(async () => {
   const municiaplities = await client.query('SELECT COUNT(*) FROM municipalities');
   console.log('There are : ' + municiaplities.rows[0].count + ' municicpalities \n');
 
-  const res = await client.query('SELECT a.name, COUNT(l.ekatte) FROM areas as a INNER JOIN localities as l on a.name = l.area GROUP BY a.name');
+  const res = await client.query('SELECT a.name, COUNT(l.ekatte) FROM Localities as l INNER JOIN municipalities as m on m.name = l.municipality INNER JOIN areas as a on m.area = a.name GROUP BY a.name');
   for (const row of res.rows) {
     console.log('In area ' + row.name + ' there are ' + row.count + ' localities');
   }
