@@ -1,4 +1,4 @@
-'use-strict';
+'use  strict';
 /* eslint-disable max-len */
 const Client = require('pg').Client;
 const client = new Client({

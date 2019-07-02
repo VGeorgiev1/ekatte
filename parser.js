@@ -7,7 +7,7 @@ const pool = new Pool({
   host: 'localhost',
   database: 'ekkate',
   password: 'password',
-  port: 5432
+  port: 5432,
 });
 pool.query(`CREATE TABLE IF NOT EXISTS Areas(
                   name CHAR(3) PRIMARY KEY NOT NULL,
@@ -37,21 +37,21 @@ pool.query(`CREATE TABLE IF NOT EXISTS Areas(
           {
             ekatte: 'ekatte',
             name: 'obstina',
-            municipality_name: 'name'
+            municipality_name: 'name',
           });
       await createRecords('./Ek_obl.xlsx', 'Ek_obl', 2, 'Areas',
           {
             ekatte: 'ekatte',
             area_name: 'name',
             name: 'oblast',
-            region: 'region'
+            region: 'region',
           });
       await createRecords('./Ek_atte.xlsx', 'Ek_atte', 3, 'Localities',
           {
             ekatte: 'ekatte',
             name: 'name',
             area: 'oblast',
-            municipality: 'obstina'
+            municipality: 'obstina',
           });
       pool.end();
     });
@@ -71,7 +71,7 @@ async function createRecords(filename, sheet, header, model, defaults) {
   const rows = XLSX.utils.sheet_to_json(data.Sheets[sheet], {
     header: header,
     defval: '',
-    blankrows: false
+    blankrows: false,
   });
   const defKeys = Object.keys(defaults);
   const promissContainer = [];
@@ -82,10 +82,14 @@ async function createRecords(filename, sheet, header, model, defaults) {
       for (const defKey of defKeys) {
         _defaults[defKey] = row[defaults[defKey]];
       }
-      const valuesPlaceholders = [...Array(Object.values(_defaults).length)].map((_, i) => '$' + (i+1).toString());
+      const valuesPlaceholders = [...Array(Object.values(_defaults).length)]
+          .map((_, i) => '$' + (i+1).toString());
       const values = Object.values(_defaults);
+
       promissContainer.push(pool.connect().then((client) => {
-        return client.query(`INSERT INTO ${model} (${defKeys.join(',')}) VALUES(${valuesPlaceholders.join(',')}) ON CONFLICT DO NOTHING`, values)
+        return client.query(`INSERT INTO ${model} (${defKeys.join(',')})
+                             VALUES(${valuesPlaceholders.join(',')})
+                             ON CONFLICT DO NOTHING`, values)
             .then((_res) => {
               client.release();
             })
