@@ -1,13 +1,14 @@
-const express = require('express')
-const app = express()
-const path = require('path')
+'use-strict';
 
-var pub = path.join(__dirname, './public')
-app.use(express.static(pub))
+const express = require('express');
+const app = express();
+const path = require('path');
+
+app.use(express.static(path.join(__dirname, './public')));
 
 app.get('/', (req, res) => {
-  res.sendFile('index.html', { root: __dirname })
-})
+  res.sendFile('index.html', {root: __dirname});
+});
 app.listen(3000, () => {
-  console.log('worked')
-})
+  console.log('worked');
+});
