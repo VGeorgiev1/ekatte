@@ -1,64 +1,69 @@
 'use strict';
-const Pool = require('pg').Pool;
+const Client = require('pg').Client;
 const XLSX = require('xlsx');
+const pgPort = 5432;
+const fs = require('fs');
 
-const pool = new Pool({
+const tablesSql = fs.readFileSync('./tables.sql', {encoding: 'UTF-8'});
+
+
+const client = new Client({
   user: 'postgres',
   host: 'localhost',
   database: 'ekkate',
   password: 'password',
-  port: 5432,
+  port: pgPort,
 });
-pool.query(`CREATE TABLE IF NOT EXISTS Areas(
-            name CHAR(3) PRIMARY KEY NOT NULL,
-                ekatte CHAR(5),
-                area_name VARCHAR(20),
-                region CHAR(4)
-            );
-            CREATE TABLE IF NOT EXISTS Municipalities(
-                name CHAR(5) PRIMARY KEY NOT NULL,
-                ekatte CHAR(5),
-                municipality_name VARCHAR(20),
-                area CHAR(3),
-                FOREIGN KEY(area) references Areas(name)
-            );
-            CREATE TABLE IF NOT EXISTS Localities(
-                ekatte CHAR(5) PRIMARY KEY NOT NULL,
-                name VARCHAR(30),
-                municipality CHAR(5),
-                type VARCHAR(5),
-                FOREIGN KEY(municipality) REFERENCES Municipalities(name)
-            );`)
-    .then(async (res, err) => {
-      if (err) {
-        console.log(err);
-      }
-      await createRecords('./Ek_obl.xlsx', 'Ek_obl', 2, 'Areas',
-          {
-            ekatte: 'ekatte',
-            area_name: 'name',
-            name: 'oblast',
-            region: 'region',
-          });
-      await createRecords('./Ek_obst.xlsx', 'Ek_obst', 2, 'Municipalities',
-          {
-            ekatte: 'ekatte',
-            name: 'obstina',
-            municipality_name: 'name',
-            area: {col: 'obstina', filter: (val)=>val.substring(0, 3)},
-          });
-      await createRecords('./Ek_atte.xlsx', 'Ek_atte', 3, 'Localities',
-          {
-            ekatte: 'ekatte',
-            name: 'name',
-            municipality: 'obstina',
-            type: 't_v_m',
-          });
-      pool.end();
-    });
+client.connect();
 
+const shouldAbort = (err) => {
+  if (err) {
+    console.error('Error in transaction', err.stack);
+    client.query('ROLLBACK', (err) => {
+      if (err) {
+        console.error('Error rolling back client', err.stack);
+      }
+    });
+  }
+  return !!err;
+};
+
+client.query(tablesSql)
+    .then(async (res, err) => {
+      client.query('BEGIN', async (err) => {
+        if (shouldAbort(err)) return;
+        await createRecords('./Ek_obl.xlsx', 'Ek_obl', 2, 'Areas',
+            {
+              ekatte: 'ekatte',
+              area_name: 'name',
+              name: 'oblast',
+              region: 'region',
+            }
+        );
+        await createRecords('./Ek_obst.xlsx', 'Ek_obst', 2, 'Municipalities',
+            {
+              ekatte: 'ekatte',
+              name: 'obstina',
+              municipality_name: 'name',
+              area: {col: 'obstina', filter: (val)=>val.substring(0, 3)},
+            });
+        await createRecords('./Ek_atte.xlsx', 'Ek_atte', 3, 'Localities',
+            {
+              ekatte: 'ekatte',
+              name: 'name',
+              municipality: 'obstina',
+              type: 't_v_m',
+            });
+        client.end();
+      });
+      client.query('COMMIT', (err) => {
+        if (err) {
+          console.error('Error committing transaction', err.stack);
+        }
+      });
+    });
 /**
- * Creates record in the databse by given spredsheet.
+ * Creates record in the database by given spredsheet.
  * @param {String} filename The name of the spreadsheet to take records from.
  * @param {String} sheet Which sheet from the spreadsheet to look into.
  * @param {int} header Header offset in the sheet.
@@ -76,33 +81,28 @@ async function createRecords(filename, sheet, header, model, defaults) {
   });
   const defKeys = Object.keys(defaults);
   const promissContainer = [];
-
   for (const row of rows) {
     if (row['ekatte'] !== '00000') {
       const _defaults = {};
       for (const defKey of defKeys) {
+        const currentValue = defaults[defKey];
         if (defaults[defKey].filter) {
-          _defaults[defKey] = defaults[defKey].filter(row[defaults[defKey].col]);
+          _defaults[defKey] = currentValue.filter(row[currentValue.col]);
         } else {
-          _defaults[defKey] = row[defaults[defKey]];
+          _defaults[defKey] = row[currentValue];
         }
       }
       const valuesPlaceholders = [...Array(Object.values(_defaults).length)]
           .map((_, i) => '$' + (i+1).toString());
-
       const values = Object.values(_defaults);
-      promissContainer.push(pool.connect().then((client) => {
-        return client.query(`INSERT INTO ${model} (${defKeys.join(',')})
-                             VALUES(${valuesPlaceholders.join(',')})
-                             ON CONFLICT DO NOTHING`, values)
-            .then((_res) => {
-              client.release();
-            })
-            .catch((e) => {
-              client.release();
-              console.log(e.stack);
-            });
-      }));
+
+      promissContainer.push(client.query(`
+                    INSERT INTO ${model} (${defKeys.join(',')})
+                    VALUES(${valuesPlaceholders.join(',')})
+                    ON CONFLICT DO NOTHING`, values)
+          .then((res, err) => {
+            if (shouldAbort(err)) return;
+          }));
     }
   }
   return Promise.all(promissContainer);

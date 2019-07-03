@@ -1,7 +1,8 @@
 /* eslint-disable guard-for-in */
 'use strict';
 /**
- * Send an ajax request to the server with the search value.
+ * Send an ajax request to the server with the search value
+ * and append the server response.
  */
 function search() {
   const val = $('#locality').val();
@@ -13,8 +14,10 @@ function search() {
     }).then((res) => {
       $('#info').remove();
       $('tr').remove();
+
       const table = $('<table id="info">');
       const lables = $('<tr>');
+
       for (const key of res.lables) {
         lables.append($(`<td>${key}</td>`));
       }
